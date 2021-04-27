@@ -1,11 +1,12 @@
 """Main module."""
 import logging
-import pdb
 import tempfile
 from functools import wraps
+from itertools import zip_longest
 
 from ansiwrap import ansilen
 import colorama
+import dictdiffer
 import f90nml
 
 
@@ -16,10 +17,10 @@ class NamelistDiff:
 
     _cleanup_funcs = []
 
-    def __init__(self, nml1, nml2, config):
+    def __init__(self, nml1, nml2):
         if not isinstance(nml1, f90nml.Namelist):
             nml1 = f90nml.read(nml1)
-        if not isinstnace(nml2, f90nml.Namelist):
+        if not isinstance(nml2, f90nml.Namelist):
             nml2 = f90nml.read(nml2)
 
         self._cleanup_namelist(nml1)
@@ -28,23 +29,23 @@ class NamelistDiff:
         self.nml1 = nml1
         self.nml2 = nml2
 
-    @staticmethod
-    def _cleanup_namelist(nml):
-        for cleanup_func in _cleanup_funcs:
+    @classmethod
+    def _cleanup_namelist(cls, nml):
+        for cleanup_func in cls._cleanup_funcs:
             nml = cleanup_func(nml)
 
-    @staticmethod
-    def _cleanup_func():
+    @classmethod
+    def _cleanup_func(cls, meth):
 
         @wraps(meth)
         def wrapped_meth(meth, *args, **kwargs):
-            _cleanup_funcs.append(meth.__name__)
+            cls._cleanup_funcs.append(meth.__name__)
             return meth(*args, **kwargs)
         return wrapped_meth
 
     def diff(self):
-        diff = dictdiffer.diff(nml1, nml2, expand=True)
-        diff_swap = dictdiffer.swap(dictdiffer.diff(nml1, nml2, expand=True))
+        diff = dictdiffer.diff(self.nml1, self.nml2, expand=True)
+        diff_swap = dictdiffer.swap(dictdiffer.diff(self.nml1, self.nml2, expand=True))
 
         f1 = tempfile.NamedTemporaryFile(mode="w+")
         f2 = tempfile.NamedTemporaryFile(mode="w+")
@@ -53,9 +54,9 @@ class NamelistDiff:
         # f2 = open("nml_diff2", mode="w+")
 
         print("Formatting nml1...")
-        format_nml(nml1, f1, diff)
+        format_nml(self.nml1, f1, diff)
         print("Formatting nml2...")
-        format_nml(nml2, f2, diff_swap)
+        format_nml(self.nml2, f2, diff_swap)
 
         f1.flush()
         f2.flush()
@@ -102,8 +103,7 @@ def ansi_ljust(s, width):
     needed = width - ansilen(s)
     if needed > 0:
         return s + " " * needed
-    else:
-        return s
+    return s
 
 
 def namelist_to_iter(nml):
@@ -188,8 +188,7 @@ def format_entry(current_chapter, current_entry, all_diffs):
             elif isinstance(rest[0], list):
                 diff_key = rest[0][1]
             else:
-
-                pdb.set_trace()
+                raise TypeError()
             # Check current entry vs diff entry:
             if current_key != diff_key:
                 continue  # Reset loop, not the same keys

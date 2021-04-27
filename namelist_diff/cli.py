@@ -1,17 +1,17 @@
 """Console script for namelist_diff."""
 import argparse
 import sys
-import tempfile
-from itertools import zip_longest
 
 import dictdiffer
 import f90nml
 
 from .namelist_diff import (
     NamelistDiff
-        )
+)
 
-from .config import (load_config, write_default_config)
+from .config import (
+    write_default_config
+)
 
 def main():
     """Console script for namelist_diff."""
